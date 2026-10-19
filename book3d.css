@@ -1,0 +1,115 @@
+/* 立体书本组件：尺寸来自真实开本(mm)，--k = 每毫米像素 */
+.shelfrow{display:flex;align-items:flex-end;gap:5px;
+  perspective:1500px;perspective-origin:50% -55%;padding-top:44px;padding-bottom:22px;
+  transform:rotateX(3deg);transform-style:preserve-3d}
+.bk3{position:relative;transform-style:preserve-3d;flex:0 0 auto;border:0;background:none;padding:0;
+  --wpx:calc(var(--w) * var(--k) * 1px);
+  --hpx:calc(var(--h) * var(--k) * 1px);
+  --dpx:calc(var(--d) * var(--k) * 1px);
+  width:var(--wpx);height:var(--hpx);cursor:pointer;
+  transform:rotate(var(--lean,0deg));transform-origin:bottom center;
+  transition:transform .32s cubic-bezier(.22,1,.36,1)}
+.bk3:hover,.bk3:focus-visible{outline:none;transform:rotate(var(--lean,0deg)) translateY(-14px)}
+.bk3 .f{position:absolute;left:50%;top:50%}
+.bk3 .front{width:var(--wpx);height:var(--hpx);
+  margin-left:calc(var(--wpx) / -2);margin-top:calc(var(--hpx) / -2);
+  transform:translateZ(calc(var(--dpx) / 2));overflow:hidden;background:#bbb}
+.bk3 .front img{width:100%;height:100%;object-fit:fill;display:block}
+.bk3 .front::after{content:"";position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 2px 0 #ffffff5c, inset 0 -1px 0 #00000038, inset -1px 0 0 #00000030;
+  background:linear-gradient(100deg,#ffffff14,#0000 34%)}
+/* 书脊：生成色 + 年份（未拍到实物书脊，故不仿印刷排版） */
+.bk3 .spine{width:var(--dpx);height:var(--hpx);
+  margin-left:calc(var(--dpx) / -2);margin-top:calc(var(--hpx) / -2);
+  transform:rotateY(-90deg) translateZ(calc(var(--wpx) / 2));
+  background:var(--sp,#666);display:grid;place-items:center;overflow:hidden}
+.bk3 .spine i{font-style:normal;writing-mode:vertical-rl;font-size:min(calc(var(--dpx) * .58),11px);
+  color:#fff;opacity:.72;letter-spacing:.08em;white-space:nowrap}
+.bk3 .spine::after,.bk3 .top::after,.bk3 .fore::after{content:"";position:absolute;inset:0}
+.bk3 .spine::after{background:linear-gradient(90deg,#0000 0%,#00000055 78%,#00000088 100%)}
+/* 书顶：纸页断面 */
+.bk3 .top{width:var(--wpx);height:var(--dpx);
+  margin-left:calc(var(--wpx) / -2);margin-top:calc(var(--dpx) / -2);
+  transform:rotateX(90deg) translateZ(calc(var(--hpx) / 2));
+  background:repeating-linear-gradient(0deg,#efe7d6 0 1px,#d9cdb4 1px 2px)}
+.bk3 .top::after{background:linear-gradient(#00000040,#0000)}
+/* 书口（右侧切口） */
+.bk3 .fore{width:var(--dpx);height:var(--hpx);
+  margin-left:calc(var(--dpx) / -2);margin-top:calc(var(--hpx) / -2);
+  transform:rotateY(90deg) translateZ(calc(var(--wpx) / 2));
+  background:repeating-linear-gradient(90deg,#efe7d6 0 1px,#dbcfb6 1px 2px)}
+.bk3 .fore::after{background:linear-gradient(90deg,#00000066,#0000)}
+/* 落地接触阴影 */
+.bk3 .cast{width:var(--wpx);height:calc(var(--dpx) * 5);
+  margin-left:calc(var(--wpx) / -2);margin-top:calc(var(--dpx) * -2.5);
+  transform:rotateX(-90deg) translateZ(calc(var(--hpx) / 2));
+  background:linear-gradient(#0000007a,#0000 85%);filter:blur(4px);pointer-events:none}
+
+/* 玻璃反射（光台风格用）：与封面共面、下方镜像淡出 */
+.bk3 .refl{width:var(--wpx);height:var(--hpx);
+  margin-left:calc(var(--wpx) / -2);margin-top:calc(var(--hpx) / -2);
+  transform:translateZ(calc(var(--dpx) / 2)) translateY(100%) scaleY(-1);
+  -webkit-mask-image:linear-gradient(#000c,#0000 58%);mask-image:linear-gradient(#000c,#0000 58%);
+  opacity:0;transition:opacity .35s;overflow:hidden;pointer-events:none}
+.bk3 .refl img{width:100%;height:100%;object-fit:fill;display:block}
+/* 数据标签（档案库风格用）：贴在封面上，纯 ASCII 才用等宽 */
+.bk3 .tag{position:absolute;left:0;top:0;transform:translateZ(calc(var(--dpx) / 2 + 0.5px));
+  font:600 9px/1 ui-monospace,"Consolas","SF Mono",monospace;letter-spacing:.06em;
+  padding:3px 5px;background:#000000a8;color:var(--acc,#45e0c8);opacity:0;transition:opacity .28s;
+  pointer-events:none;white-space:nowrap}
+.bk3 .tag i{font-style:normal}
+
+/* ===== v3：3/4 视角精装书（只作用于 .bk3.v3，shelf.html 的 .bk3 不受影响） =====
+   参照 参考\perspective-hardcober-book-mockup.png：转角露书脊、硬壳外沿、页块内缩、双层落影 */
+/* 相机：弱透视 + 大转角。实测四组（persp 620/1400/2600 × yaw 26/30/32）后取此组——
+   透视越强，行两端的书朝向越不一致；1800 让整排朝向接近，同时书脊全部可见 */
+.shelfrow.v3{perspective:1800px;perspective-origin:50% 30%;transform:rotateX(1.5deg);
+  padding-top:52px;padding-bottom:6px}   /* 转角后书的视觉底边比 layout 底边高，收窄下缘免得书浮在层板上方 */
+.bk3.v3{
+  --ovx:calc(var(--k) * 3.2px);          /* 硬壳外沿（三边包边） */
+  --bdx:calc(var(--k) * 1.6px);          /* 封面纸板厚 */
+  --yaw:30deg;                            /* 3/4 转角，正值＝右侧后退、左侧书脊露出 */
+  transform:rotate(var(--lean,0deg)) rotateY(var(--yaw));
+  transform-origin:bottom center}
+.bk3.v3:hover,.bk3.v3:focus-visible{
+  transform:rotate(var(--lean,0deg)) rotateY(calc(var(--yaw) * .38)) translateY(-16px) translateZ(26px)}
+/* 硬壳正面：真实开本尺寸就是封面尺寸，页块比它小 */
+.bk3.v3 .front{border-radius:0 2px 2px 0;
+  box-shadow:0 0 0 .5px #00000033}
+.bk3.v3 .front::after{
+  box-shadow:inset 0 2px 0 #ffffff66, inset 0 -2px 2px #00000042,
+             inset -2px 0 3px #00000038, inset 2px 0 0 #ffffff30;
+  background:linear-gradient(104deg,#ffffff2e 0 12%,#0000 46%,#00000012 100%)}
+/* 页块顶面：内缩 --ovx，厚度扣掉两片纸板 */
+.bk3.v3 .top{width:calc(var(--wpx) - var(--ovx) * 2);height:calc(var(--dpx) - var(--bdx) * 2);
+  margin-left:calc((var(--wpx) - var(--ovx) * 2) / -2);
+  margin-top:calc((var(--dpx) - var(--bdx) * 2) / -2);
+  transform:rotateX(90deg) translateZ(calc(var(--hpx) / 2 - var(--ovx)));
+  background:
+    repeating-linear-gradient(0deg,#00000010 0 1px,#0000 1px 3px),
+    linear-gradient(#f6f0e2,#e2d8c2 62%,#cfc3a8)}
+.bk3.v3 .top::after{background:linear-gradient(#00000052,#00000010 70%)}
+/* 页块书口 */
+.bk3.v3 .fore{width:calc(var(--dpx) - var(--bdx) * 2);height:calc(var(--hpx) - var(--ovx) * 2);
+  margin-left:calc((var(--dpx) - var(--bdx) * 2) / -2);
+  margin-top:calc((var(--hpx) - var(--ovx) * 2) / -2);
+  transform:rotateY(90deg) translateZ(calc(var(--wpx) / 2 - var(--ovx)));
+  background:
+    repeating-linear-gradient(90deg,#0000000f 0 1px,#0000 1px 3px),
+    linear-gradient(90deg,#f6f0e2,#ded3bb 70%,#c8bca1)}
+.bk3.v3 .fore::after{background:linear-gradient(90deg,#00000070,#00000008 65%)}
+/* 书脊：包住整个壳高，靠转角这一侧受光 */
+.bk3.v3 .spine{height:var(--hpx);border-radius:2px 0 0 2px}
+.bk3.v3 .spine::after{
+  background:linear-gradient(90deg,#ffffff26 0,#0000 22%,#00000040 76%,#00000080 100%)}
+/* 落影：一层贴地接触影 + 一层扩散环境影，全书只用一次 blur */
+.bk3.v3 .cast{width:calc(var(--wpx) * 1.16);height:calc(var(--dpx) * 7);
+  margin-left:calc(var(--wpx) * -.58);margin-top:calc(var(--dpx) * -3.5);
+  background:
+    radial-gradient(60% 46% at 46% 30%,#00000059,#0000 72%),
+    linear-gradient(#00000073 0,#00000024 26%,#0000 78%);
+  filter:blur(6px)}
+@media (prefers-reduced-motion:reduce){
+  .bk3.v3{transition:none}
+  .bk3.v3:hover,.bk3.v3:focus-visible{transform:rotate(var(--lean,0deg)) rotateY(var(--yaw)) translateY(-6px)}
+}

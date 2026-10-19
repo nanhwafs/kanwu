@@ -1,0 +1,26 @@
+/* 实景背景轮播：四张图轮流当底，中间用「雾化」过场。
+
+   为什么用真元素不用 body::before：伪元素的 style 没法从 JS 直接改，
+   要换图就得动 CSSOM 或改 class 表，绕。一个 fixed 的空 div 最省。
+
+   opacity 上在这一层，不上在 body：上在 body 会把书封、文字一起冲淡。
+   配套要 body{background:transparent}，否则那层不透明米白会盖在图上面
+   （绘制顺序：父元素背景 → 负 z-index 子层 → 内容），米白底交给 html 撑着。 */
+.bgfx{
+  position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-position:center; background-size:cover; background-repeat:no-repeat;
+  opacity:var(--bgfx-op, .22);
+  filter:blur(0px);
+  /* 时长由 JS 那三个常数灌进来，这里只声明要过渡哪两个属性 */
+  transition:opacity var(--bgfx-fade,2s) ease-in-out,
+             filter  var(--bgfx-fade,2s) ease-in-out;
+}
+/* 雾化态：糊掉 + 淡出。两个属性同时走，才像「雾起来」而不是单纯变暗 */
+.bgfx.fog{ opacity:0; filter:blur(22px); }
+
+@media (prefers-reduced-motion:reduce){
+  /* 会晕的人不该被每 15 秒一次的呼吸效果追着跑：定在第一张，不轮播、不过渡。
+     JS 那边也会停掉计时器，这里只是把过渡一起关掉，两边都关才算数。 */
+  .bgfx{ transition:none; }
+  .bgfx.fog{ opacity:var(--bgfx-op, .22); filter:none; }
+}

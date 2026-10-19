@@ -1,0 +1,118 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>南华独中 · 校刊数码馆</title>
+<link rel="stylesheet" href="common.css"><link rel="stylesheet" href="book3d.css">
+<link rel="stylesheet" href="bgcycle.css">
+<style>
+html,body{background:#f3efe6}   /* html 也要上色：内容比 body 高时下半截会露出根元素底色 */
+.stage{max-width:1100px;margin:0 auto;padding:6px max(16px,4vw) 60px}
+.plank{height:13px;border-radius:0 0 4px 4px;margin-top:-1px;
+  background:linear-gradient(#e6d9be,#c6b391 55%,#a8956d);box-shadow:0 8px 16px rgba(120,95,60,.28)}
+.cap{font-size:12px;opacity:.5;margin:26px 0 4px;letter-spacing:.06em}
+.rowwrap{overflow-x:auto;overflow-y:visible;scrollbar-width:none;padding-bottom:0}
+.rowwrap::-webkit-scrollbar{display:none}
+/* 内嵌阅读器：已上 AnyFlip 的书点了就直接翻，不再中间隔一层说明画面 */
+.rd{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:4vh 3vw;color:#f6f2e8}
+/* 这一屏主角是 iframe，文字全是配角：只留年份(19)与附注(12)两级，
+   中间那两档 14/13 同屏却只差 1px，读不出层级 */
+.rd-h{font-size:12px;letter-spacing:.16em;opacity:.72}
+.rd-h b{font-size:19px;font-weight:700;letter-spacing:.06em;margin-right:10px}
+#rdr::backdrop{background:rgba(12,10,8,.94);backdrop-filter:blur(4px)}
+.rd-f{position:relative;width:min(96vw,1180px);height:min(74vh,62vw)}
+.rd iframe{width:100%;height:100%;border:0;display:block;
+  background:#0e0d0b;box-shadow:0 26px 70px rgba(10,8,4,.6)}
+/* AnyFlip 首屏要十几秒才画出来，空着会被当成坏了 */
+.rd-load{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;
+  font-size:12px;letter-spacing:.2em;opacity:.55;transition:opacity .5s}
+.rd-load.off{opacity:0}
+.rd-n{font-size:12px;opacity:.5}
+.rd-n a{color:inherit}
+
+/* 背景轮播要求 body 让开底色，米白交给 html —— 理由见 bgcycle.css */
+body{background:transparent}
+</style>
+<header><h1>南华独中 · 校刊数码馆</h1><div class="sub" id="range">历年校刊典藏</div></header>
+<div class="stage">
+  <div class="cap">每一本按真实开本比例陈列 · 点书本可翻阅全刊</div>
+  <div id="shelves"></div>
+</div>
+<script src="data.js"></script><script src="common.js"></script><script>/* 观众版无仪式；这个空壳只为满足 x.html 的 mountLaunch() 呼叫 */
+function mountLaunch(){}</script><script>
+/* 2026-08-25 林子策裁定：x.html 为定案款，其余架体封存 → 移除 A–G 测试导航 */ mountDialog();
+// 三行数据全部可查：35 本来自 items2.json；页数只报实测那批（25 本合计 4190），
+// 另 10 本 pages_est:true 是估算，故写「逾 4,000」不写合计 5540
+// 「期」只算年度校刊，纪念特刊不是一期，故排除 special
+// 年份跨度现算，别写死 —— 08-28 补 2025《季逅》后「1962–2024／62 年」当场就错了
+const YA=ITEMS.map(i=>+i.year), Y0=Math.min(...YA), Y1=Math.max(...YA);
+range.textContent = Y0+' – '+Y1+' · 历年校刊典藏';
+mountLaunch({seconds:10, facts:[
+  '典藏校刊 '+ITEMS.filter(i=>!i.special).length+' 期',
+  Y0+' — '+Y1+' · 横跨 '+(Y1-Y0)+' 年',
+  '逾 4,000 页 已数码化'
+]});
+// 已上 AnyFlip 的书直接开内嵌阅读器；只覆盖本页的 openItem，
+// common.js 原版留给 shelf.html 与 a–g.html，不动它们
+document.body.insertAdjacentHTML('beforeend',`<dialog id="rdr">
+  <button class="x" onclick="rdr.close()" aria-label="关闭">&times;</button>
+  <div class="rd">
+    <div class="rd-h"><b id="rdY"></b><span id="rdT"></span></div>
+    <div class="rd-f">
+      <iframe id="rdI" title="校刊内页" seamless scrolling="no" frameborder="0"
+              allowtransparency="true" allowfullscreen="true"></iframe>
+      <div class="rd-load" id="rdLoad">翻阅器载入中…</div>
+    </div>
+    <div class="rd-n">翻阅由 AnyFlip 托管 · <a id="rdL" target="_blank" rel="noopener">另开分页全屏阅读 ↗</a></div>
+  </div></dialog>`);
+const _openDetail = openItem;
+openItem = function(i){
+  const it = ITEMS[i];
+  // anyflip.com/<user>/<book>/ → online.anyflip.com/<user>/<book>/index.html（可内嵌的那个地址）
+  const m = /^https?:\/\/anyflip\.com\/([^\/]+)\/([^\/]+)/.exec(it.url || '');
+  if(!m) return _openDetail(i);                 // 还没上传的仍走原本的封面＋占位说明
+  rdY.textContent = it.year; rdT.textContent = it.title;
+  rdLoad.classList.remove('off');
+  rdI.src = `https://online.anyflip.com/${m[1]}/${m[2]}/index.html`;
+  rdL.href = it.url;
+  rdr.showModal();
+};
+// onload 只代表文档到了，flipbook 还要再画一会儿，所以多等一拍
+rdI.addEventListener('load',()=>{ setTimeout(()=>rdLoad.classList.add('off'),1400); });
+rdr.addEventListener('close',()=>{ rdI.src='about:blank'; });  // 关掉就停，别在背景继续加载
+
+const LEAN=[0,0,-1.4,0,0,1.1,0,0,0,-0.8,0,0];
+const GAPMM = 30;                       // 书本间距，毫米制——与装架预算同单位
+function put(el, list, k){
+  list.forEach((it,n)=>{
+    const i=ITEMS.indexOf(it);
+    const b=document.createElement('button'); b.className='bk3 v3'; b.type='button';
+    b.style.cssText=`--w:${it.mm_w};--h:${it.mm_h};--d:${it.mm_d};--sp:${it.spine};--lean:${LEAN[n%LEAN.length]}deg`;
+    b.setAttribute('aria-label',it.year+' 年'+it.title);
+    b.innerHTML=`<span class="f cast"></span><span class="f top"></span><span class="f fore"></span>
+      <span class="f spine"><i>${it.year}</i></span>
+      <span class="f front"><img src="${it.img}" alt="" loading="lazy"></span>`;
+    b.onclick=()=>openItem(i); el.appendChild(b);
+  });
+}
+
+// 按真实宽度装架，不按本数——真书架就是这样排的
+const K = innerWidth<760 ? .42 : .70;
+const BUDGET = (Math.min(innerWidth,1100) - (innerWidth<760?58:96)) / K;   // 可用毫米数
+let cur=[], used=0;
+const flush=()=>{ if(!cur.length) return;
+  const w=document.createElement('div');
+  w.innerHTML=`<div class="rowwrap"><div class="shelfrow v3" style="--k:${K};gap:${(GAPMM*K).toFixed(1)}px"></div></div><div class="plank"></div>`;
+  shelves.appendChild(w); put(w.querySelector('.shelfrow'), cur, K); cur=[]; used=0; };
+// 纪念特刊不与年度校刊同列（林子策 08-24），单独一层放在最后
+const MAIN=ITEMS.filter(i=>!i.special), SPECIAL=ITEMS.filter(i=>i.special);
+MAIN.forEach(it=>{ const wmm=it.mm_w+GAPMM;
+  if(used+wmm>BUDGET) flush();
+  cur.push(it); used+=wmm; });
+flush();
+if(SPECIAL.length){
+  const cap=document.createElement('div');
+  cap.className='cap'; cap.style.marginTop='38px'; cap.textContent='纪念特刊';
+  shelves.appendChild(cap);
+  cur=SPECIAL.slice(); flush();
+}
+</script>
+<script src="bgcycle.js"></script>
